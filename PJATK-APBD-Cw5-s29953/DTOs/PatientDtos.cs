@@ -54,3 +54,11 @@ public class WardResponseDto
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
 }
+
+public class CreateBedAssignmentRequestDto
+{
+    public DateTime From { get; set; }
+    public DateTime? To { get; set; }
+    public string BedType { get; set; } = null!;
+    public string Ward { get; set; } = null!;
+}

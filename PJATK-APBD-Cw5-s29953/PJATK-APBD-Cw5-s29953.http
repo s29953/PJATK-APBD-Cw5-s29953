@@ -1,6 +1,9 @@
-@PJATK_APBD_Cw5_s29953_HostAddress = http://localhost:5247
+POST http://localhost:5247/api/patients/04122098765/bedassignments
+Content-Type: application/json
 
-GET {{PJATK_APBD_Cw5_s29953_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
+{
+  "from": "2026-06-15T09:00:00",
+  "to": "2026-06-20T10:00:00",
+  "bedType": "Standard",
+  "ward": "Kardiologia"
+}

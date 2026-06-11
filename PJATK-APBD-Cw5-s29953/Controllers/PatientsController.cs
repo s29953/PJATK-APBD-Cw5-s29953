@@ -82,4 +82,72 @@ public class PatientsController : ControllerBase
 
         return Ok(patients);
     }
+    
+    [HttpPost("{pesel}/bedassignments")]
+    public async Task<IActionResult> CreateBedAssignment(
+        string pesel,
+        [FromBody] CreateBedAssignmentRequestDto request)
+    {
+        var patientExists = await _context.Patients
+            .AnyAsync(p => p.Pesel == pesel);
+
+        if (!patientExists)
+        {
+            return NotFound($"Patient with PESEL {pesel} was not found.");
+        }
+
+        var ward = await _context.Wards
+            .FirstOrDefaultAsync(w => w.Name == request.Ward);
+
+        if (ward is null)
+        {
+            return NotFound($"Ward '{request.Ward}' was not found.");
+        }
+
+        var bedType = await _context.BedTypes
+            .FirstOrDefaultAsync(bt => bt.Name == request.BedType);
+
+        if (bedType is null)
+        {
+            return NotFound($"Bed type '{request.BedType}' was not found.");
+        }
+
+        var requestTo = request.To ?? new DateTime(9999, 12, 31);
+
+        var availableBed = await _context.Beds
+            .Include(b => b.Room)
+            .Include(b => b.BedAssignments)
+            .Where(b =>
+                b.BedTypeId == bedType.Id &&
+                b.Room.WardId == ward.Id &&
+                !b.BedAssignments.Any(ba =>
+                    request.From < (ba.To ?? new DateTime(9999, 12, 31)) &&
+                    requestTo > ba.From))
+            .FirstOrDefaultAsync();
+
+        if (availableBed is null)
+        {
+            return NotFound($"No available bed of type '{request.BedType}' was found in ward '{request.Ward}' for the selected time period.");
+        }
+
+        var bedAssignment = new BedAssignment
+        {
+            PatientPesel = pesel,
+            BedId = availableBed.Id,
+            From = request.From,
+            To = request.To
+        };
+
+        _context.BedAssignments.Add(bedAssignment);
+        await _context.SaveChangesAsync();
+
+        return Created($"/api/patients/{pesel}/bedassignments/{bedAssignment.Id}", new
+        {
+            bedAssignment.Id,
+            bedAssignment.PatientPesel,
+            bedAssignment.BedId,
+            bedAssignment.From,
+            bedAssignment.To
+        });
+    }
 }
